@@ -8,17 +8,20 @@ function PlanTrip({ onTripPlanned }) {
     <PageShell>
       <Box
         sx={{
+          width: { xs: '100%', md: '80vw' },
           minHeight: { md: '80vh' },
+          maxWidth: { xl: '1400px' },
           maxHeight: { xl: '920px' },
           display: 'flex',
           alignItems: { md: 'center' },
+          mx: 'auto',
         }}
       >
         <Grid container alignItems="stretch" width="100%" sx={{ height: '100%' }}>
-          <Grid size={{ xs: 12, md: 5 }}>
+          <Grid size={{ xs: 12, md: 5 }} sx={{ display: 'flex', '& > *': { flex: 1, width: '100%' } }}>
             <TripPlannerForm onResult={onTripPlanned} />
           </Grid>
-          <Grid size={{ xs: 12, md: 7 }}>
+          <Grid size={{ xs: 12, md: 7 }} sx={{ display: 'flex', '& > *': { flex: 1, width: '100%' } }}>
             <PreviewPanel />
           </Grid>
         </Grid>
