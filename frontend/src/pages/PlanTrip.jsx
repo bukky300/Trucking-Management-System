@@ -6,7 +6,7 @@ import PreviewPanel from '../components/preview/PreviewPanel'
 function PlanTrip({ onTripPlanned }) {
   return (
     <PageShell>
-      <Grid container spacing={2.5} alignItems="stretch">
+      <Grid container alignItems="stretch">
         <Grid size={{ xs: 12, md: 5 }}>
           <TripPlannerForm onResult={onTripPlanned} />
         </Grid>

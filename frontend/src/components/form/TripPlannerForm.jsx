@@ -171,7 +171,7 @@ function TripPlannerForm({ onResult }) {
   }
 
   return (
-    <Card sx={{ height: '100%' }}>
+    <Card sx={{ height: '100%', borderRadius: 0}}>
       <CardContent sx={{ p: { xs: 2, md: 3 }, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Box>
           <Typography variant="h5">Plan New Trip</Typography>

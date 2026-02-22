@@ -1,6 +1,8 @@
 from django.test import TestCase
 from rest_framework.test import APIClient
+from unittest.mock import patch
 
+from apps.trips.views import compute_summary_metrics
 from utils.hos_engine import generate_hos_logs
 from utils.stop_planner import plan_stops
 
@@ -69,6 +71,39 @@ class PlanTripViewTests(TestCase):
         self.assertIn("logs", body)
         self.assertTrue(body["logs"])
         self.assertIn("remarks", body["logs"][0])
+
+    @patch("apps.trips.views.get_route")
+    @patch("apps.trips.views.plan_stops")
+    @patch("apps.trips.views.generate_hos_logs")
+    def test_plan_trip_total_days_uses_generated_logs_count(
+        self, mock_generate_hos_logs, mock_plan_stops, mock_get_route
+    ):
+        mock_get_route.return_value = {
+            "distance_miles": 100.0,
+            "duration_hours": 2.0,
+            "polyline": [[-120.0, 35.0], [-119.0, 36.0]],
+        }
+        mock_plan_stops.return_value = []
+        mock_generate_hos_logs.return_value = [
+            {"day": 1, "events": [], "remarks": []},
+            {"day": 2, "events": [], "remarks": []},
+            {"day": 3, "events": [], "remarks": []},
+        ]
+
+        response = self.client.post(
+            "/api/trips/plan",
+            {
+                "current_location": "A",
+                "pickup_location": "B",
+                "dropoff_location": "C",
+                "cycle_used_hours": 0,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["summary"]["total_days"], 3)
 
 
 class StopPlannerTests(TestCase):
@@ -281,3 +316,43 @@ class HosEngineTests(TestCase):
 
         self.assertEqual(combined["reason"], "Fuel + 30-min break")
         self.assertEqual(combined["end_minute"] - combined["start_minute"], 45)
+
+
+class SummaryMetricsTests(TestCase):
+    def test_compute_summary_metrics_non_compliant_when_cycle_exceeds_70(self):
+        days = [
+            {
+                "day": 1,
+                "events": [
+                    {"status": "driving", "start_minute": 0, "end_minute": 120},
+                ],
+                "remarks": [],
+            }
+        ]
+
+        summary = compute_summary_metrics(days, 69)
+
+        self.assertEqual(summary["driving_hours"], 2.0)
+        self.assertFalse(summary["hos_compliant"])
+        self.assertEqual(summary["hos_reasons"], ["Insufficient cycle hours remaining"])
+        self.assertEqual(summary["cycle_remaining_hours_before"], 1.0)
+        self.assertEqual(summary["cycle_remaining_hours_after"], -1.0)
+
+    def test_compute_summary_metrics_compliant_when_cycle_within_70(self):
+        days = [
+            {
+                "day": 1,
+                "events": [
+                    {"status": "driving", "start_minute": 60, "end_minute": 540},
+                ],
+                "remarks": [],
+            }
+        ]
+
+        summary = compute_summary_metrics(days, 10)
+
+        self.assertEqual(summary["driving_hours"], 8.0)
+        self.assertTrue(summary["hos_compliant"])
+        self.assertEqual(summary["hos_reasons"], [])
+        self.assertEqual(summary["cycle_remaining_hours_before"], 60.0)
+        self.assertEqual(summary["cycle_remaining_hours_after"], 52.0)

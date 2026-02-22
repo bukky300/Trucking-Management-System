@@ -2,9 +2,7 @@ import { Box, Card, CardContent, Chip, Grid, Stack, Typography } from '@mui/mate
 
 function formatHours(value) {
   if (typeof value !== 'number' || Number.isNaN(value)) return '—'
-  const whole = Math.floor(value)
-  const minutes = Math.round((value - whole) * 60)
-  return `${whole}h ${minutes}m`
+  return `${value.toFixed(2)} h`
 }
 
 function formatMiles(value) {
@@ -30,9 +28,10 @@ function complianceFromResponse(response) {
 
 function TripSummaryPanel({ response }) {
   const distanceMiles = response?.route?.distance_miles
-  const durationHours = response?.route?.duration_hours
+  const durationHours = response?.summary?.driving_hours
   const totalDays = response?.summary?.total_days
   const compliance = complianceFromResponse(response)
+  const hosReasons = Array.isArray(response?.summary?.hos_reasons) ? response.summary.hos_reasons : []
   const stops = Array.isArray(response?.stops) ? response.stops : []
 
   return (
@@ -92,8 +91,13 @@ function TripSummaryPanel({ response }) {
                   color: compliance === null ? 'text.primary' : compliance ? 'success.main' : 'error.main',
                 }}
               >
-                {compliance === null ? '—' : compliance ? 'OK' : 'NON-COMPLIANT'}
+                {compliance === null ? '—' : compliance ? 'YES' : 'NO'}
               </Typography>
+              {compliance === false && hosReasons[0] ? (
+                <Typography variant="caption" color="error.main">
+                  {hosReasons[0]}
+                </Typography>
+              ) : null}
             </CardContent>
           </Card>
         </Grid>

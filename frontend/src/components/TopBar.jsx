@@ -1,7 +1,7 @@
 import { Avatar, Box, IconButton, Paper, Stack, Typography } from '@mui/material'
 import { useAppTheme } from '../theme/AppThemeProvider'
 
-function TopBar({ cycleText = '34h Remaining' }) {
+function TopBar() {
   const { mode, toggleMode } = useAppTheme()
   const isDark = mode === 'dark'
 
@@ -43,12 +43,6 @@ function TopBar({ cycleText = '34h Remaining' }) {
         </Stack>
 
         <Stack direction="row" spacing={1.25} alignItems="center">
-          <Box sx={{ textAlign: 'right' }}>
-            <Typography variant="caption" color="text.secondary">
-              Current Cycle
-            </Typography>
-            <Typography variant="subtitle2">{cycleText}</Typography>
-          </Box>
           <IconButton
             onClick={toggleMode}
             sx={{
@@ -61,7 +55,6 @@ function TopBar({ cycleText = '34h Remaining' }) {
           >
             {isDark ? '☀' : '☾'}
           </IconButton>
-          <Avatar sx={{ width: 36, height: 36 }}>D</Avatar>
         </Stack>
       </Stack>
     </Paper>

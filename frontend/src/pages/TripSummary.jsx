@@ -48,29 +48,6 @@ function TripSummary({ response, onPlanAnother }) {
             <ELDLogPanel logs={logs} />
           </CardContent>
         </Card>
-
-        <Card>
-          <CardContent>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Raw JSON
-            </Typography>
-            <Box
-              component="pre"
-              sx={{
-                m: 0,
-                fontSize: 12,
-                overflowX: 'auto',
-                p: 1.5,
-                borderRadius: 2,
-                bgcolor: 'action.hover',
-                border: '1px solid',
-                borderColor: 'divider',
-              }}
-            >
-              {JSON.stringify(response, null, 2)}
-            </Box>
-          </CardContent>
-        </Card>
       </Stack>
     </PageShell>
   )
