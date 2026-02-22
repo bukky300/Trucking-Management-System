@@ -1,16 +1,15 @@
 import { useState } from 'react'
-import TripForm from './components/TripForm'
-import TripResult from './components/TripResult'
+import PlanTrip from './pages/PlanTrip'
+import TripSummary from './pages/TripSummary'
 
 function App() {
   const [tripResponse, setTripResponse] = useState(null)
 
-  return (
-    <main style={{ padding: '16px' }}>
-      <TripForm onResult={setTripResponse} />
-      <TripResult response={tripResponse} />
-    </main>
-  )
+  if (!tripResponse) {
+    return <PlanTrip onTripPlanned={setTripResponse} />
+  }
+
+  return <TripSummary response={tripResponse} onPlanAnother={() => setTripResponse(null)} />
 }
 
 export default App

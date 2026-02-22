@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Box, Typography } from '@mui/material'
+import { Box, Typography, useTheme } from '@mui/material'
 
 const WIDTH = 1100
 const HEIGHT = 460
@@ -111,6 +111,7 @@ async function reverseGeocodeLocationLabel(lng, lat, signal) {
 }
 
 function ELDLogSheet({ day, events = [], remarks = [] }) {
+  const theme = useTheme()
   const plotWidth = WIDTH - LEFT_PAD - RIGHT_PAD
   const plotHeight = HEIGHT - TOP_PAD - BOTTOM_PAD
   const rowCount = 4
@@ -241,9 +242,15 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
     return { ...remark, xPos, level }
   })
 
+  const strokeStrong = theme.palette.mode === 'dark' ? '#dbeafe' : '#0f172a'
+  const strokeMajor = theme.palette.mode === 'dark' ? '#93c5fd' : '#334155'
+  const strokeMinor = theme.palette.mode === 'dark' ? 'rgba(148, 163, 184, 0.55)' : '#cbd5e1'
+  const textPrimary = theme.palette.text.primary
+  const pathColor = theme.palette.primary.main
+
   return (
     <Box>
-      <Typography variant="subtitle1" sx={{ mb: 1 }}>
+      <Typography variant="subtitle1" sx={{ mb: 1.25, letterSpacing: 0.2 }}>
         DRIVER&apos;S DAILY LOG (ONE CALENDAR DAY — 24 HOURS) — Day {day}
       </Typography>
       <Box sx={{ overflowX: 'auto' }}>
@@ -259,8 +266,8 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
             width={plotWidth}
             height={plotHeight}
             fill="none"
-            stroke="#111827"
-            strokeWidth="2"
+            stroke={strokeStrong}
+            strokeWidth="2.2"
           />
 
           {/* ── Vertical grid lines ── */}
@@ -275,8 +282,8 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
                 y1={TOP_PAD}
                 x2={lineX}
                 y2={TOP_PAD + plotHeight}
-                stroke={isHour ? '#374151' : '#c7cdd4'}
-                strokeWidth={isHour ? 1.8 : 0.6}
+                stroke={isHour ? strokeMajor : strokeMinor}
+                strokeWidth={isHour ? 2 : 0.75}
               />
             )
           })}
@@ -289,7 +296,7 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
               y={TOP_PAD - 12}
               fontSize="10"
               textAnchor="middle"
-              fill="#111827"
+              fill={textPrimary}
             >
               {hourLabel(hour)}
             </text>
@@ -307,8 +314,8 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
                     y1={lineY}
                     x2={LEFT_PAD + plotWidth}
                     y2={lineY}
-                    stroke="#374151"
-                    strokeWidth="2"
+                    stroke={strokeMajor}
+                    strokeWidth="2.2"
                   />
                 )}
                 <text
@@ -316,7 +323,7 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
                   y={centerY + 4}
                   fontSize="12"
                   textAnchor="end"
-                  fill="#111827"
+                  fill={textPrimary}
                 >
                   {statusRow.label}
                 </text>
@@ -325,7 +332,7 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
                   y={centerY + 4}
                   fontSize="13"
                   textAnchor="middle"
-                  fill="#111827"
+                  fill={textPrimary}
                 >
                   {(totalsByStatus[statusRow.key] / 60).toFixed(2)}
                 </text>
@@ -339,7 +346,7 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
             y={TOP_PAD - 12}
             fontSize="11"
             textAnchor="middle"
-            fill="#111827"
+            fill={textPrimary}
           >
             TOTAL HOURS
           </text>
@@ -349,8 +356,8 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
             <path
               d={path}
               fill="none"
-              stroke="#1976d2"
-              strokeWidth="6"
+              stroke={pathColor}
+              strokeWidth="6.5"
               strokeLinejoin="miter"
               strokeLinecap="butt"
             />
@@ -367,7 +374,7 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
             fontSize="11"
             fontWeight="700"
             textAnchor="end"
-            fill="#111827"
+            fill={textPrimary}
           >
             REMARKS
           </text>
@@ -379,8 +386,8 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
             width={plotWidth}
             height={REMARKS_BOX_H}
             fill="none"
-            stroke="#374151"
-            strokeWidth="1.5"
+            stroke={strokeMajor}
+            strokeWidth="1.8"
           />
 
           {/* Tick marks inside the remarks box (hang down from top) */}
@@ -396,8 +403,8 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
                 y1={remarksBoxTop}
                 x2={lineX}
                 y2={remarksBoxTop + tickLen}
-                stroke="#374151"
-                strokeWidth={isHour ? 1.8 : 0.8}
+                stroke={isHour ? strokeMajor : strokeMinor}
+                strokeWidth={isHour ? 2 : 0.9}
               />
             )
           })}
@@ -431,19 +438,19 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
                 <line
                   x1={lx} y1={bTop}
                   x2={lx} y2={bBot}
-                  stroke="#1976d2" strokeWidth="3" strokeLinecap="square"
+                  stroke={pathColor} strokeWidth="3.3" strokeLinecap="square"
                 />
                 {/* Right arm of U */}
                 <line
                   x1={rx} y1={bTop}
                   x2={rx} y2={bBot}
-                  stroke="#1976d2" strokeWidth="3" strokeLinecap="square"
+                  stroke={pathColor} strokeWidth="3.3" strokeLinecap="square"
                 />
                 {/* Bottom of U */}
                 <line
                   x1={lx} y1={bBot}
                   x2={rx} y2={bBot}
-                  stroke="#1976d2" strokeWidth="3" strokeLinecap="square"
+                  stroke={pathColor} strokeWidth="3.3" strokeLinecap="square"
                 />
 
                 {/* Reason label — horizontal, centered */}
@@ -452,7 +459,7 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
                   y={reasonY}
                   textAnchor="middle"
                   fontSize="10"
-                  fill="#111827"
+                  fill={textPrimary}
                 >
                   {remark.reason}
                 </text>
@@ -463,7 +470,7 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
                   y={locAnchorY}
                   fontSize="12"
                   fontWeight="600"
-                  fill="#111827"
+                  fill={textPrimary}
                   textAnchor="middle"
                 >
                   {locationLabel}
