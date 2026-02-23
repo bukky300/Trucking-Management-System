@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { Box, Card, CardContent, Chip, Typography } from '@mui/material'
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import PlaceIcon from '@mui/icons-material/Place'
@@ -5,6 +6,7 @@ import LocalGasStationIcon from '@mui/icons-material/LocalGasStation'
 import HotelIcon from '@mui/icons-material/Hotel'
 import FreeBreakfastIcon from '@mui/icons-material/FreeBreakfast'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
+import { reverseGeocodeLabel } from '../../utils/geocode'
 
 function stopIcon(type) {
   switch ((type || '').toLowerCase()) {
@@ -42,10 +44,28 @@ function chipColor(type) {
   }
 }
 
-function StopRow({ stop, isLast }) {
+function reasonFromStop(stop) {
+  if (stop?.reason) return stop.reason
+  if (stop?.type === 'pickup') return 'Pre-trip'
+  if (stop?.type === 'break') return '30-min break'
+  if (stop?.type === 'fuel') return 'Fuel'
+  if (stop?.type === 'dropoff') return 'Post-trip'
+  return (stop?.type || 'Stop').toString()
+}
+
+function coordKey(lng, lat) {
+  const lngNum = Number(lng)
+  const latNum = Number(lat)
+  if (!Number.isFinite(lngNum) || !Number.isFinite(latNum)) {
+    return null
+  }
+  return `${lngNum.toFixed(5)},${latNum.toFixed(5)}`
+}
+
+function StopRow({ stop, isLast, locationLabel }) {
   const colors = stopColor(stop.type)
-  const label = (stop.reason || stop.type || 'Stop').toString().replace(/_/g, ' ')
-  const chipLabel = (stop.type || 'Stop').toString().toUpperCase().replace(/_/g, ' ')
+  const label = locationLabel || stop?.label || 'LOC'
+  const chipLabel = reasonFromStop(stop)
 
   return (
     <Box sx={{ display: 'flex', gap: 1.5 }}>
@@ -74,11 +94,7 @@ function StopRow({ stop, isLast }) {
       <Box sx={{ flex: 1, pb: isLast ? 0 : 1 }}>
         <Box
           sx={{
-            p: 1.5,
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
+            px: 1.5,
           }}
         >
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -181,6 +197,37 @@ function StopRow({ stop, isLast }) {
 }
 
 function StopsTimelineCard({ stops = [] }) {
+  const token = import.meta.env.VITE_MAPBOX_TOKEN
+  const locationCacheRef = useRef({})
+  const [locationLabels, setLocationLabels] = useState({})
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const unresolved = (Array.isArray(stops) ? stops : []).filter((stop) => {
+      const key = coordKey(stop?.lng, stop?.lat)
+      return key && !locationCacheRef.current[key]
+    })
+
+    if (unresolved.length === 0) {
+      setLocationLabels({ ...locationCacheRef.current })
+      return () => controller.abort()
+    }
+
+    const run = async () => {
+      for (const stop of unresolved) {
+        if (controller.signal.aborted) return
+        const key = coordKey(stop?.lng, stop?.lat)
+        if (!key) continue
+        const label = await reverseGeocodeLabel(stop.lng, stop.lat, token, controller.signal)
+        locationCacheRef.current[key] = label
+      }
+      setLocationLabels({ ...locationCacheRef.current })
+    }
+
+    run()
+    return () => controller.abort()
+  }, [stops, token])
+
   return (
     <Card>
       <CardContent>
@@ -200,13 +247,18 @@ function StopsTimelineCard({ stops = [] }) {
               '&::-webkit-scrollbar-thumb': { bgcolor: 'divider', borderRadius: 2 },
             }}
           >
-            {stops.map((stop, index) => (
-              <StopRow
-                key={`${stop.type}-${index}`}
-                stop={stop}
-                isLast={index === stops.length - 1}
-              />
-            ))}
+            {stops.map((stop, index) => {
+              const key = coordKey(stop?.lng, stop?.lat)
+              const locationLabel = (key && locationLabels[key]) || stop?.label || 'LOC'
+              return (
+                <StopRow
+                  key={`${stop.type}-${index}`}
+                  stop={stop}
+                  isLast={index === stops.length - 1}
+                  locationLabel={locationLabel}
+                />
+              )
+            })}
           </Box>
         )}
       </CardContent>
