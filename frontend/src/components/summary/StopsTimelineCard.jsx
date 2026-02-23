@@ -229,8 +229,8 @@ function StopsTimelineCard({ stops = [] }) {
   }, [stops, token])
 
   return (
-    <Card>
-      <CardContent>
+    <Card sx={{ maxHeight: { lg: '56vh' } }}>
+      <CardContent sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <Typography variant="subtitle1" sx={{ mb: 1.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, fontSize: '0.78rem', color: 'text.secondary' }}>
           Stops Timeline
         </Typography>

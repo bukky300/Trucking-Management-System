@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Box, Button, Card, CardContent, Grid, Stack, Typography } from '@mui/material'
 import PageShell from '../components/layout/PageShell'
 import MapView from '../components/MapView'
@@ -5,6 +6,7 @@ import TripSummaryPanel from '../components/summary/TripSummaryPanel'
 import ELDLogPanel from '../components/ELDLogPanel'
 
 function TripSummary({ response, onPlanAnother }) {
+  const [showLogs, setShowLogs] = useState(false)
   const polyline = response?.route?.polyline
   const stops = response?.stops || []
   const logs = response?.logs || []
@@ -22,17 +24,27 @@ function TripSummary({ response, onPlanAnother }) {
 
         <Grid container spacing={2.5}>
           <Grid size={{ xs: 12, lg: 7.5 }}>
-            <Card>
-              <CardContent>
-                {hasPolyline ? (
-                  <MapView polyline={polyline} stops={stops} />
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No route polyline returned yet.
-                  </Typography>
-                )}
-              </CardContent>
-            </Card>
+            <Stack spacing={1} alignItems="flex-start">
+              <Card sx={{ width: '100%' }}>
+                <CardContent>
+                  {hasPolyline ? (
+                    <MapView polyline={polyline} stops={stops} />
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No route polyline returned yet.
+                    </Typography>
+                  )}
+                </CardContent>
+              </Card>
+              <Button
+                size="small"
+                variant="text"
+                onClick={() => setShowLogs((prev) => !prev)}
+                sx={{ alignSelf: 'flex-start' }}
+              >
+                {showLogs ? 'Hide logs' : 'View logs'}
+              </Button>
+            </Stack>
           </Grid>
 
           <Grid size={{ xs: 12, lg: 4.5 }}>
@@ -40,14 +52,16 @@ function TripSummary({ response, onPlanAnother }) {
           </Grid>
         </Grid>
 
-        <Card>
-          <CardContent>
-            <Typography variant="h6" sx={{ mb: 1.5 }}>
-              ELD Daily Log
-            </Typography>
-            <ELDLogPanel logs={logs} />
-          </CardContent>
-        </Card>
+        {showLogs ? (
+          <Card>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 1.5 }}>
+                ELD Daily Log
+              </Typography>
+              <ELDLogPanel logs={logs} />
+            </CardContent>
+          </Card>
+        ) : null}
       </Stack>
     </PageShell>
   )
