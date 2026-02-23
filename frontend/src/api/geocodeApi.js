@@ -116,7 +116,6 @@ export async function searchPlaces(query, signal, options = {}) {
     session_token: SESSION_TOKEN,
     limit: 10,
     language: options.language || 'en',
-    country: options.country || 'us',
     // Request all useful types including POI
     types: 'poi,address,place,locality,neighborhood,postcode',
   }

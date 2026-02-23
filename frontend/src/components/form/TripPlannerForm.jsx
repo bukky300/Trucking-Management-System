@@ -152,6 +152,7 @@ function TripPlannerForm({ onResult }) {
     locationEquals(currentLocationPayload, pickupLocationPayload) &&
     locationEquals(currentLocationPayload, dropoffLocationPayload) &&
     locationEquals(pickupLocationPayload, dropoffLocationPayload)
+  const pickupDropoffSame = locationEquals(pickupLocationPayload, dropoffLocationPayload)
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -235,6 +236,11 @@ function TripPlannerForm({ onResult }) {
               Current, pickup, and dropoff cannot all be the same location.
             </Typography>
           ) : null}
+          {pickupDropoffSame ? (
+            <Typography variant="caption" color="error">
+              Pickup and dropoff cannot be the same location.
+            </Typography>
+          ) : null}
 
           <Divider sx={{ my: 0.5 }} />
           <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -245,7 +251,7 @@ function TripPlannerForm({ onResult }) {
               type="submit"
               variant="contained"
               size="large"
-              disabled={!hasAllLocations || !isCycleValid || allLocationsSame}
+              disabled={!hasAllLocations || !isCycleValid || allLocationsSame || pickupDropoffSame}
               sx={{ px: 3 }}
             >
               Plan Trip
