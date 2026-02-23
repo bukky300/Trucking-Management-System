@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Box, Button, Card, CardContent, Grid, Stack, Typography } from '@mui/material'
 import PageShell from '../components/layout/PageShell'
 import MapView from '../components/MapView'
@@ -7,6 +7,7 @@ import ELDLogPanel from '../components/ELDLogPanel'
 
 function TripSummary({ response, onPlanAnother }) {
   const [showLogs, setShowLogs] = useState(false)
+  const logsSectionRef = useRef(null)
   const polyline = response?.route?.polyline
   const stops = response?.stops || []
   const timelineStops = Array.isArray(response?.timeline_stops) ? response.timeline_stops : []
@@ -19,6 +20,11 @@ function TripSummary({ response, onPlanAnother }) {
       : stops
   const logs = response?.logs || []
   const hasPolyline = Array.isArray(polyline) && polyline.length > 0
+
+  useEffect(() => {
+    if (!showLogs || !logsSectionRef.current) return
+    logsSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [showLogs])
 
   return (
     <PageShell>
@@ -61,7 +67,7 @@ function TripSummary({ response, onPlanAnother }) {
         </Grid>
 
         {showLogs ? (
-          <Card>
+          <Card ref={logsSectionRef}>
             <CardContent>
               <Typography variant="h6" sx={{ mb: 1.5 }}>
                 ELD Daily Log
