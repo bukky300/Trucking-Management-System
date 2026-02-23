@@ -7,7 +7,7 @@ function ELDLogPanel({ logs = [] }) {
   }
 
   return (
-    <Stack spacing={2} sx={{ mt: 2 }}>
+    <Stack spacing={2} sx={{ mt: 0 }}>
       {logs.map((log, idx) => (
         <ELDLogSheet
           key={`${log?.day ?? idx}-${idx}`}

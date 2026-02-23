@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
-import { Box, IconButton, Popover, Typography, useTheme } from '@mui/material'
+import { Box, IconButton, Popover, Typography } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import AddIcon from '@mui/icons-material/Add'
-import RemoveIcon from '@mui/icons-material/Remove'
+import RemoveIcon from '@mui/icons-material/Close'
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import PlaceIcon from '@mui/icons-material/Place'
 import LocalGasStationIcon from '@mui/icons-material/LocalGasStation'
@@ -65,33 +65,6 @@ function stopMarkerColor(type) {
   }
 }
 
-function LegendItem({ type, label, isDark }) {
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Box
-        sx={{
-          width: 20,
-          height: 28,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: '10px / 14px',
-          backgroundColor: stopMarkerColor(type),
-          color: '#fff',
-          border: `1px solid ${isDark ? 'rgba(255,255,255,0.68)' : 'rgba(255,255,255,0.92)'}`,
-          boxShadow: '0 2px 6px rgba(2, 6, 23, 0.28)',
-          flexShrink: 0,
-        }}
-      >
-        {stopMarkerIcon(type)}
-      </Box>
-      <Typography variant="caption" sx={{ lineHeight: 1.25 }}>
-        {label}
-      </Typography>
-    </Box>
-  )
-}
-
 function capitalize(text) {
   if (!text) return ''
   return `${text.charAt(0).toUpperCase()}${text.slice(1)}`
@@ -101,8 +74,6 @@ const MIN_ZOOM = 3.5
 const MAX_ZOOM = 16
 
 function MapView({ polyline, stops = [] }) {
-  const theme = useTheme()
-  const isDark = theme.palette.mode === 'dark'
   const mapRef = useRef(null)
   const locationCacheRef = useRef({})
   const [mapLoaded, setMapLoaded] = useState(false)
@@ -196,7 +167,6 @@ function MapView({ polyline, stops = [] }) {
     if (stop?.type === 'break') return '30-min break'
     if (stop?.type === 'fuel') return 'Fuel'
     if (stop?.type === 'dropoff') return 'Post-trip'
-    if (stop?.type === 'eld_limit') return 'Daily driving limit'
     return capitalize(stop?.type || 'Stop')
   }
 
@@ -286,67 +256,110 @@ function MapView({ polyline, stops = [] }) {
           }}
           anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
           transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          slotProps={{
+            paper: {
+              sx: {
+                borderRadius: 2,
+                overflow: 'hidden',
+                minWidth: 220,
+                maxWidth: 280,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+                border: '1px solid',
+                borderColor: 'divider',
+                mb: 1,
+              },
+            },
+          }}
         >
-          {selectedStop ? (
-            <Box sx={{ p: 1.5, minWidth: 180 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                <Typography variant="subtitle2">{reasonFromStop(selectedStop)}</Typography>
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    setSelectedStop(null)
-                    setPopoverAnchorEl(null)
-                  }}
+          {selectedStop ? (() => {
+            const color = stopMarkerColor(selectedStop.type)
+            return (
+              <Box>
+                {/* Colored header strip */}
+                <Box
                   sx={{
-                    color: '#111827',
-                    backgroundColor: '#e5e7eb',
-                    '&:hover': { backgroundColor: '#d1d5db' },
+                    bgcolor: color,
+                    px: 1.5,
+                    py: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 1,
                   }}
                 >
-                  x
-                </IconButton>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: 'rgba(255,255,255,0.2)',
+                        borderRadius: '50%',
+                        width: 26,
+                        height: 26,
+                        color: '#fff',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {stopMarkerIcon(selectedStop.type)}
+                    </Box>
+                    <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 700, lineHeight: 1.2 }}>
+                      {reasonFromStop(selectedStop)}
+                    </Typography>
+                  </Box>
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setSelectedStop(null)
+                      setPopoverAnchorEl(null)
+                    }}
+                    sx={{
+                      color: 'rgba(255,255,255,0.85)',
+                      p: 0.25,
+                      '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.15)' },
+                    }}
+                  >
+                    <RemoveIcon sx={{ fontSize: 14 }} />
+                  </IconButton>
+                </Box>
+
+                {/* Body */}
+                <Box sx={{ px: 1.5, py: 1.25, bgcolor: 'background.paper' }}>
+                  {/* Location */}
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75, mb: selectedStop.mile != null ? 0.75 : 0 }}>
+                    <PlaceIcon sx={{ fontSize: 15, color: 'text.disabled', mt: '2px', flexShrink: 0 }} />
+                    <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.4 }}>
+                      {getLocationLabel(selectedStop)}
+                    </Typography>
+                  </Box>
+
+                  {/* Mile marker */}
+                  {selectedStop.mile != null && (
+                    <Box
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 0.5,
+                        mt: 0.5,
+                        px: 0.9,
+                        py: 0.3,
+                        borderRadius: 1,
+                        bgcolor: alpha(color, 0.1),
+                        border: '1px solid',
+                        borderColor: alpha(color, 0.25),
+                      }}
+                    >
+                      <Typography variant="caption" sx={{ color, fontWeight: 700, lineHeight: 1 }}>
+                        Mile {Math.round(selectedStop.mile)}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
               </Box>
-              <Typography variant="body2">{getLocationLabel(selectedStop)}</Typography>
-              {selectedStop.mile !== undefined && selectedStop.mile !== null ? (
-                <Typography variant="body2">Mile {selectedStop.mile}</Typography>
-              ) : null}
-            </Box>
-          ) : null}
+            )
+          })() : null}
         </Popover>
       </Map>
-
-      {/* Route legend — bottom left */}
-      <Box
-        sx={{
-          position: 'absolute',
-          left: 12,
-          bottom: 12,
-          zIndex: 10,
-          p: 1.25,
-          borderRadius: 1,
-          bgcolor: isDark
-            ? alpha(theme.palette.background.paper, 0.9)
-            : alpha(theme.palette.background.paper, 0.94),
-          border: '1px solid',
-          borderColor: 'divider',
-          boxShadow: isDark ? '0 4px 14px rgba(2,6,23,0.45)' : '0 3px 12px rgba(2,6,23,0.16)',
-          minWidth: 176,
-        }}
-      >
-        <Typography
-          variant="caption"
-          sx={{ display: 'block', fontWeight: 700, mb: 0.95, letterSpacing: 0.2 }}
-        >
-          Route Legend
-        </Typography>
-        <Box sx={{ display: 'grid', gap: 0.9 }}>
-          <LegendItem type="pickup" label="Pre-trip" isDark={isDark} />
-          <LegendItem type="break" label="30-min break" isDark={isDark} />
-          <LegendItem type="fuel" label="Fuel" isDark={isDark} />
-          <LegendItem type="eld_limit" label="Daily driving limit" isDark={isDark} />
-          <LegendItem type="dropoff" label="Post-trip" isDark={isDark} />
-        </Box>
-      </Box>
 
       {/* Zoom controls — top right */}
       <Box

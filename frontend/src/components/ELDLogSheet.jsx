@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Box, Typography, useTheme } from '@mui/material'
+import { Box, Typography, useMediaQuery, useTheme } from '@mui/material'
 
 const WIDTH = 1100
 const HEIGHT = 460
@@ -13,7 +13,7 @@ const MINUTES_PER_DAY = 1440
 const REMARKS_GAP = 14       // gap between grid bottom and remarks box top
 const REMARKS_BOX_H = 22     // height of the tick-mark strip (the box itself)
 const BRACKET_HANG = 20      // how far the U-bracket hangs below the box bottom
-const LABEL_AREA_H = 110     // vertical space reserved below bracket for labels
+const LABEL_AREA_H = 200     // vertical space reserved below bracket for labels
 
 const STATUSES = [
   { key: 'OFF_DUTY', label: 'Off Duty' },
@@ -112,6 +112,9 @@ async function reverseGeocodeLocationLabel(lng, lat, signal) {
 
 function ELDLogSheet({ day, events = [], remarks = [] }) {
   const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const fontScale = isMobile ? 1.14 : 1
+  const fs = (size) => Number((size * fontScale).toFixed(2))
   const plotWidth = WIDTH - LEFT_PAD - RIGHT_PAD
   const plotHeight = HEIGHT - TOP_PAD - BOTTOM_PAD
   const rowCount = 4
@@ -250,7 +253,10 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
 
   return (
     <Box>
-      <Typography variant="subtitle1" sx={{ mb: 1.25, letterSpacing: 0.2 }}>
+      <Typography
+        variant="subtitle1"
+        sx={{ mb: 1.25, letterSpacing: 0.2, fontSize: isMobile ? '1.05rem' : undefined }}
+      >
         DRIVER&apos;S DAILY LOG (ONE CALENDAR DAY — 24 HOURS) — Day {day}
       </Typography>
       <Box sx={{ overflowX: 'auto' }}>
@@ -294,7 +300,7 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
               key={`hour-${hour}`}
               x={x(hour * 60)}
               y={TOP_PAD - 12}
-              fontSize="10"
+              fontSize={fs(10)}
               textAnchor="middle"
               fill={textPrimary}
             >
@@ -321,7 +327,7 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
                 <text
                   x={LEFT_PAD - 10}
                   y={centerY + 4}
-                  fontSize="12"
+                  fontSize={fs(12)}
                   textAnchor="end"
                   fill={textPrimary}
                 >
@@ -330,7 +336,7 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
                 <text
                   x={LEFT_PAD + plotWidth + 45}
                   y={centerY + 4}
-                  fontSize="13"
+                  fontSize={fs(13)}
                   textAnchor="middle"
                   fill={textPrimary}
                 >
@@ -344,7 +350,7 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
           <text
             x={LEFT_PAD + plotWidth + 45}
             y={TOP_PAD - 12}
-            fontSize="11"
+            fontSize={fs(11)}
             textAnchor="middle"
             fill={textPrimary}
           >
@@ -371,7 +377,7 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
           <text
             x={LEFT_PAD - 10}
             y={remarksBoxTop + REMARKS_BOX_H / 2 + 4}
-            fontSize="11"
+            fontSize={fs(11)}
             fontWeight="700"
             textAnchor="end"
             fill={textPrimary}
@@ -423,11 +429,13 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
             const bTop = remarksBoxBottom + lvlOff
             const bBot = bTop + BRACKET_HANG
 
-            // Reason text: centered under the bracket, horizontal
-            const reasonY = bBot + 12
+            // Small vertical pointer from bracket center to text anchors
+            const pointerEndY = bBot + 12
 
-            // Location anchor: just below reason text
-            const locAnchorY = reasonY + 10
+            // Vertical text anchors (rotated -90, bottom-to-top)
+            const reasonAnchorX = xMid - 7
+            const locationAnchorX = xMid + 7
+            const textAnchorY = pointerEndY + 44
 
             const locationLabel =
               (remark.key && locationLabels[remark.key]) || (remark.key ? 'LOC' : 'LOC')
@@ -453,25 +461,38 @@ function ELDLogSheet({ day, events = [], remarks = [] }) {
                   stroke={pathColor} strokeWidth="3.3" strokeLinecap="square"
                 />
 
-                {/* Reason label — horizontal, centered */}
+                {/* Small vertical pointer from bracket center */}
+                <line
+                  x1={xMid}
+                  y1={bBot}
+                  x2={xMid}
+                  y2={pointerEndY}
+                  stroke={pathColor}
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+
+                {/* Reason label — vertical (bottom-to-top) */}
                 <text
-                  x={xMid}
-                  y={reasonY}
-                  textAnchor="middle"
-                  fontSize="10"
+                  x={reasonAnchorX}
+                  y={textAnchorY}
+                  textAnchor="end"
+                  fontSize={fs(10.5)}
                   fill={textPrimary}
+                  transform={`rotate(-90 ${reasonAnchorX} ${textAnchorY})`}
                 >
                   {remark.reason}
                 </text>
 
-                {/* Location label — rotated -65°, anchor at bottom-left of text */}
+                {/* Location label — vertical (bottom-to-top) */}
                 <text
-                  x={xMid}
-                  y={locAnchorY}
-                  fontSize="12"
+                  x={locationAnchorX}
+                  y={textAnchorY}
+                  fontSize={fs(11.5)}
                   fontWeight="600"
                   fill={textPrimary}
-                  textAnchor="middle"
+                  textAnchor="end"
+                  transform={`rotate(-90 ${locationAnchorX} ${textAnchorY})`}
                 >
                   {locationLabel}
                 </text>
