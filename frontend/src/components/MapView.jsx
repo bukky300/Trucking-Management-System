@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { Box, IconButton, Popover, Typography } from '@mui/material'
+import LocalShippingIcon from '@mui/icons-material/LocalShipping'
+import PlaceIcon from '@mui/icons-material/Place'
+import LocalGasStationIcon from '@mui/icons-material/LocalGasStation'
+import HotelIcon from '@mui/icons-material/Hotel'
+import FreeBreakfastIcon from '@mui/icons-material/FreeBreakfast'
 import Map, { Layer, Marker, Source } from 'react-map-gl/mapbox'
 import mapboxgl from 'mapbox-gl'
 import { reverseGeocodeLabel } from '../utils/geocode'
@@ -17,11 +22,40 @@ const routeLayer = {
   },
 }
 
-const stopEmojiByType = {
-  pickup: '📦',
-  dropoff: '🏁',
-  break: '☕',
-  fuel: '⛽',
+function stopMarkerIcon(type) {
+  switch ((type || '').toLowerCase()) {
+    case 'pickup':
+      return <LocalShippingIcon sx={{ fontSize: 13 }} />
+    case 'dropoff':
+      return <PlaceIcon sx={{ fontSize: 13 }} />
+    case 'fuel':
+      return <LocalGasStationIcon sx={{ fontSize: 13 }} />
+    case 'sleeper':
+    case 'rest':
+      return <HotelIcon sx={{ fontSize: 13 }} />
+    case 'break':
+      return <FreeBreakfastIcon sx={{ fontSize: 13 }} />
+    default:
+      return <PlaceIcon sx={{ fontSize: 13 }} />
+  }
+}
+
+function stopMarkerColor(type) {
+  switch ((type || '').toLowerCase()) {
+    case 'pickup':
+      return '#16a34a'
+    case 'dropoff':
+      return '#dc2626'
+    case 'fuel':
+      return '#1976d2'
+    case 'sleeper':
+    case 'rest':
+      return '#7c3aed'
+    case 'break':
+      return '#f59e0b'
+    default:
+      return '#2563eb'
+  }
 }
 
 function capitalize(text) {
@@ -154,7 +188,7 @@ function MapView({ polyline, stops = [] }) {
       mapboxAccessToken={token}
       initialViewState={{ longitude: -96, latitude: 37.8, zoom: 3 }}
       mapStyle="mapbox://styles/mapbox/streets-v12"
-      style={{ width: '100%', height: 360 }}
+      style={{ width: '100%', height: '75vh' }}
       onLoad={() => {
         setMapLoaded(true)
         // Fit immediately after load as well
@@ -180,16 +214,21 @@ function MapView({ polyline, stops = [] }) {
                     setPopoverAnchorEl(event.currentTarget)
                   }}
                   sx={{
-                    fontSize: '18px',
-                    lineHeight: 1,
-                    background: 'transparent',
-                    border: 0,
-                    p: 0,
-                    boxShadow: 1,
+                    width: 20,
+                    height: 28,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '10px / 14px',
+                    backgroundColor: stopMarkerColor(stop.type),
+                    color: '#fff',
+                    border: '1px solid rgba(255,255,255,0.9)',
+                    boxShadow: '0 2px 6px rgba(2, 6, 23, 0.3)',
                     cursor: 'pointer',
+                    p: 0,
                   }}
                 >
-                  {stopEmojiByType[stop.type] || '📍'}
+                  {stopMarkerIcon(stop.type)}
                 </Box>
               </Marker>
             )
