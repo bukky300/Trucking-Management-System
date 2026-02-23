@@ -1,0 +1,19 @@
+# TMS + ELD Trip Planner backend dependencies
+# Python: 3.11+
+
+# Core framework
+Django==5.2.11
+djangorestframework==3.16.1
+
+# API/CORS
+django-cors-headers==4.9.0
+
+# Environment variable loading (.env support used by route_service.py)
+python-dotenv==1.2.1
+
+# Django runtime dependencies (pinned for reproducible deploys)
+asgiref==3.11.1
+sqlparse==0.5.5
+
+# Production WSGI server
+gunicorn>=21.2,<24
