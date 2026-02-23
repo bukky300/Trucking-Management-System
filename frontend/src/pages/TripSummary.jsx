@@ -28,7 +28,16 @@ function TripSummary({ response, onPlanAnother }) {
 
   return (
     <PageShell>
-      <Stack spacing={2}>
+      <Stack
+        spacing={2}
+        sx={{
+          animation: 'pageEnter 520ms ease-out',
+          '@keyframes pageEnter': {
+            from: { opacity: 0, transform: 'translateY(8px)' },
+            to: { opacity: 1, transform: 'translateY(0)' },
+          },
+        }}
+      >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">Trip Summary</Typography>
           <Button variant="outlined" onClick={onPlanAnother}>

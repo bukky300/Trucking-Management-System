@@ -8,6 +8,11 @@ function PlanTrip({ onTripPlanned }) {
     <PageShell>
       <Box
         sx={{
+          animation: 'pageEnter 520ms ease-out',
+          '@keyframes pageEnter': {
+            from: { opacity: 0, transform: 'translateY(8px)' },
+            to: { opacity: 1, transform: 'translateY(0)' },
+          },
           width: { xs: '100%', md: '80vw' },
           minHeight: { xs: 'calc(100vh - 120px)', md: '80vh' },
           maxWidth: { xl: '1400px' },

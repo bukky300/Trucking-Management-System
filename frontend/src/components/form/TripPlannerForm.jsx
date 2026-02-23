@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import axios from 'axios'
-import { Box, Button, Card, CardContent, Divider, Stack, TextField, Typography } from '@mui/material'
+import { Box, Button, Card, CardContent, CircularProgress, Divider, Stack, TextField, Typography } from '@mui/material'
 import { planTrip } from '../../api/tripApi'
 import { reverseGeocode } from '../../api/geocodeApi'
 import { usePlaceAutocomplete } from '../../hooks/usePlaceAutocomplete'
@@ -17,6 +17,7 @@ const initialForm = {
 
 function TripPlannerForm({ onResult }) {
   const [formData, setFormData] = useState(initialForm)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [locating, setLocating] = useState({
     current_location: false,
     pickup_location: false,
@@ -156,14 +157,20 @@ function TripPlannerForm({ onResult }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+    if (isSubmitting) return
     const payload = {
       current_location: currentLocationPayload,
       pickup_location: pickupLocationPayload,
       dropoff_location: dropoffLocationPayload,
       cycle_used_hours: cycleUsedHours,
     }
-    const result = await planTrip(payload)
-    onResult(result)
+    setIsSubmitting(true)
+    try {
+      const result = await planTrip(payload)
+      onResult(result)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleClear = () => {
@@ -251,10 +258,17 @@ function TripPlannerForm({ onResult }) {
               type="submit"
               variant="contained"
               size="large"
-              disabled={!hasAllLocations || !isCycleValid || allLocationsSame || pickupDropoffSame}
+              disabled={!hasAllLocations || !isCycleValid || allLocationsSame || pickupDropoffSame || isSubmitting}
               sx={{ px: 3 }}
             >
-              Plan Trip
+              {isSubmitting ? (
+                <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+                  <CircularProgress size={16} color="inherit" />
+                  <span>Plan Trip</span>
+                </Box>
+              ) : (
+                'Plan Trip'
+              )}
             </Button>
           </Stack>
         </Box>
