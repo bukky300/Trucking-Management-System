@@ -47,6 +47,7 @@ class PlanTripViewTests(TestCase):
         self.assertEqual(body["summary"]["total_days"], 1)
         self.assertEqual(body["summary"]["total_miles"], body["route"]["distance_miles"])
         self.assertIn("stops", body)
+        self.assertIn("timeline_stops", body)
         self.assertIn("logs", body)
         self.assertTrue(body["logs"])
         self.assertIn("remarks", body["logs"][0])
@@ -68,6 +69,7 @@ class PlanTripViewTests(TestCase):
         self.assertIn("route", body)
         self.assertIn("summary", body)
         self.assertIn("stops", body)
+        self.assertIn("timeline_stops", body)
         self.assertIn("logs", body)
         self.assertTrue(body["logs"])
         self.assertIn("remarks", body["logs"][0])
@@ -105,6 +107,50 @@ class PlanTripViewTests(TestCase):
         body = response.json()
         self.assertEqual(body["summary"]["total_days"], 3)
 
+    @patch("apps.trips.views.get_route")
+    @patch("apps.trips.views.plan_stops")
+    @patch("apps.trips.views.generate_hos_logs")
+    def test_plan_trip_includes_eld_limit_in_timeline_stops(
+        self, mock_generate_hos_logs, mock_plan_stops, mock_get_route
+    ):
+        mock_get_route.return_value = {
+            "distance_miles": 100.0,
+            "duration_hours": 2.0,
+            "polyline": [[-120.0, 35.0], [-119.0, 36.0]],
+        }
+        mock_plan_stops.return_value = [{"type": "pickup", "lng": -120.0, "lat": 35.0, "mile": 0}]
+        mock_generate_hos_logs.return_value = [
+            {
+                "day": 1,
+                "events": [],
+                "remarks": [
+                    {
+                        "stop_type": "eld_limit",
+                        "minute": 660,
+                        "reason": "ELD Required (11h daily driving limit reached)",
+                    }
+                ],
+            }
+        ]
+
+        response = self.client.post(
+            "/api/trips/plan",
+            {
+                "current_location": "A",
+                "pickup_location": "B",
+                "dropoff_location": "C",
+                "cycle_used_hours": 0,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        timeline_stops = body.get("timeline_stops", [])
+        eld_limit = next((stop for stop in timeline_stops if stop.get("type") == "eld_limit"), None)
+        self.assertIsNotNone(eld_limit)
+        self.assertTrue(eld_limit.get("eld_required"))
+
 
 class StopPlannerTests(TestCase):
     def _build_route(self, miles):
@@ -141,6 +187,7 @@ class StopPlannerTests(TestCase):
 
         self.assertEqual(stop_types, ["pickup", "break", "dropoff"])
         self.assertEqual(stops[1].get("mile"), 400)
+        self.assertTrue(stops[1].get("eld_required"))
 
     def test_long_trip_has_break_and_fuel(self):
         route = self._build_route(1200)
@@ -169,6 +216,7 @@ class StopPlannerTests(TestCase):
         self.assertTrue(merged_fuel.get("combined_break"))
         self.assertEqual(merged_fuel.get("reason"), "Fuel + 30-min break")
         self.assertEqual(merged_fuel.get("duration_minutes"), 45)
+        self.assertTrue(merged_fuel.get("eld_required"))
 
     def test_extremely_long_trip_has_multiple_stops_without_duplicates(self):
         route = self._build_route(2500)
@@ -277,6 +325,33 @@ class HosEngineTests(TestCase):
                 if event["status"] == "driving"
             )
             self.assertLessEqual(driving_minutes, 11 * 60)
+
+    def test_eld_limit_remark_is_added_when_11h_daily_limit_is_hit(self):
+        route = {
+            "distance_miles": 1300,
+            "duration_hours": 26.0,
+            "polyline": _polyline_for_miles(1300),
+        }
+        stops = [
+            {"type": "pickup", "lng": -118.2, "lat": 34.0, "mile": 0},
+            {"type": "dropoff", "lng": -114.5, "lat": 36.3, "mile": 1300},
+        ]
+
+        logs = generate_hos_logs(route, stops)
+        limit_remarks = [
+            remark
+            for day in logs
+            for remark in day.get("remarks", [])
+            if remark.get("stop_type") == "eld_limit"
+        ]
+
+        self.assertTrue(limit_remarks)
+        self.assertTrue(limit_remarks[0].get("eld_required"))
+        self.assertEqual(limit_remarks[0].get("label"), "Daily driving limit")
+        self.assertEqual(limit_remarks[0].get("reason"), "Daily driving limit")
+        self.assertIsNotNone(limit_remarks[0].get("mile"))
+        self.assertIsNotNone(limit_remarks[0].get("lng"))
+        self.assertIsNotNone(limit_remarks[0].get("lat"))
 
     def test_remarks_minutes_match_stop_start_times(self):
         route = self._route(500)

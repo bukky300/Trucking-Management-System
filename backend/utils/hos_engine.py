@@ -1,3 +1,6 @@
+from utils.stop_planner import get_point_at_distance
+
+
 DRIVING_MPH = 50
 MAX_DRIVING_MINUTES_PER_DAY = 11 * 60
 MAX_SHIFT_MINUTES_PER_DAY = 14 * 60
@@ -11,6 +14,22 @@ def _to_minutes(hours):
 def _miles_to_minutes(miles):
     hours = (miles or 0) / DRIVING_MPH
     return _to_minutes(hours)
+
+
+def _point_for_route_mile(route, mile):
+    polyline = route.get("polyline") if isinstance(route, dict) else None
+    if not polyline:
+        return None, None
+
+    try:
+        target_mile = max(0.0, float(mile))
+    except (TypeError, ValueError):
+        return None, None
+
+    point = get_point_at_distance(polyline, target_mile)
+    if not point or len(point) < 2:
+        return None, None
+    return point[0], point[1]
 
 
 def _segment_miles(stops, idx):
@@ -98,6 +117,7 @@ def generate_hos_logs(route, stops):
     current_minute = 0
     driving_today = 0
     shift_today = 0
+    driven_miles_total = 0.0
     events = []
     remarks = []
 
@@ -165,8 +185,31 @@ def generate_hos_logs(route, stops):
                 "abbr": _remark_abbr(stop),
                 "stop_type": stop_type,
                 "reason": _reason_from_stop(stop),
+                "label": stop.get("label"),
+                "mile": stop.get("mile"),
+                "eld_required": bool(stop.get("eld_required")),
                 "lng": stop.get("lng"),
                 "lat": stop.get("lat"),
+            }
+        )
+
+    def add_eld_limit_remark(mile):
+        ensure_current_day()
+        start_minute = current_minute
+        lng, lat = _point_for_route_mile(route, mile)
+        remarks.append(
+            {
+                "minute": start_minute,
+                "start_minute": start_minute,
+                "end_minute": min(MINUTES_PER_DAY, start_minute + 1),
+                "abbr": "ELD",
+                "stop_type": "eld_limit",
+                "reason": "Daily driving limit",
+                "label": "Daily driving limit",
+                "mile": round(float(mile), 2),
+                "eld_required": True,
+                "lng": lng,
+                "lat": lat,
             }
         )
 
@@ -205,6 +248,7 @@ def generate_hos_logs(route, stops):
                 close_day_if_needed()
 
     def schedule_driving(minutes):
+        nonlocal driven_miles_total
         remaining = minutes
         while remaining > 0:
             if current_minute >= MINUTES_PER_DAY:
@@ -222,12 +266,16 @@ def generate_hos_logs(route, stops):
 
             push_event("driving", allowed)
             remaining -= allowed
+            driven_miles_total += (allowed / 60.0) * DRIVING_MPH
 
+            hit_driving_limit = remaining > 0 and driving_today >= MAX_DRIVING_MINUTES_PER_DAY
             if remaining > 0 and (
                 driving_today >= MAX_DRIVING_MINUTES_PER_DAY
                 or shift_today >= MAX_SHIFT_MINUTES_PER_DAY
                 or current_minute >= MINUTES_PER_DAY
             ):
+                if hit_driving_limit:
+                    add_eld_limit_remark(driven_miles_total)
                 close_day_if_needed()
 
     pickup_stop = stops[0] if stops else {"type": "pickup", "mile": 0}

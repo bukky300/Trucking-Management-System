@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Box, Card, CardContent, Chip, Typography } from '@mui/material'
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import PlaceIcon from '@mui/icons-material/Place'
@@ -15,6 +15,7 @@ function stopIcon(type) {
     case 'fuel': return <LocalGasStationIcon sx={{ fontSize: 18 }} />
     case 'sleeper':
     case 'rest': return <HotelIcon sx={{ fontSize: 18 }} />
+    case 'eld_limit': return <HotelIcon sx={{ fontSize: 18 }} />
     case 'break': return <FreeBreakfastIcon sx={{ fontSize: 18 }} />
     default: return <PlaceIcon sx={{ fontSize: 18 }} />
   }
@@ -27,6 +28,7 @@ function stopColor(type) {
     case 'fuel': return { bg: '#1976d2', border: '#1976d2' }
     case 'sleeper':
     case 'rest': return { bg: 'secondary.main', border: 'secondary.main' }
+    case 'eld_limit': return { bg: 'secondary.main', border: 'secondary.main' }
     case 'break': return { bg: 'warning.main', border: 'warning.main' }
     default: return { bg: 'primary.main', border: 'primary.main' }
   }
@@ -39,6 +41,7 @@ function chipColor(type) {
     case 'fuel': return 'primary'
     case 'sleeper':
     case 'rest': return 'secondary'
+    case 'eld_limit': return 'secondary'
     case 'break': return 'warning'
     default: return 'default'
   }
@@ -50,6 +53,7 @@ function reasonFromStop(stop) {
   if (stop?.type === 'break') return '30-min break'
   if (stop?.type === 'fuel') return 'Fuel'
   if (stop?.type === 'dropoff') return 'Post-trip'
+  if (stop?.type === 'eld_limit') return 'ELD Required (11h daily driving limit reached)'
   return (stop?.type || 'Stop').toString()
 }
 
@@ -68,7 +72,7 @@ function StopRow({ stop, isLast, locationLabel }) {
   const chipLabel = reasonFromStop(stop)
 
   return (
-    <Box sx={{ display: 'flex', gap: 1.5 }}>
+    <Box sx={{ display: 'flex', gap: 2.5 }}>
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 36 }}>
         <Box
           sx={{
@@ -228,6 +232,19 @@ function StopsTimelineCard({ stops = [] }) {
     return () => controller.abort()
   }, [stops, token])
 
+  const orderedStops = useMemo(
+    () =>
+      [...(Array.isArray(stops) ? stops : [])].sort((a, b) => {
+        const dayA = Number(a?.day ?? 0)
+        const dayB = Number(b?.day ?? 0)
+        if (dayA !== dayB) return dayA - dayB
+        const minuteA = Number(a?.minute ?? a?.start_minute ?? 0)
+        const minuteB = Number(b?.minute ?? b?.start_minute ?? 0)
+        return minuteA - minuteB
+      }),
+    [stops],
+  )
+
   return (
     <Card sx={{ maxHeight: { lg: '56vh' } }}>
       <CardContent sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -235,7 +252,7 @@ function StopsTimelineCard({ stops = [] }) {
           Stops Timeline
         </Typography>
 
-        {stops.length === 0 ? (
+        {orderedStops.length === 0 ? (
           <Typography variant="body2" color="text.secondary">No stops available yet.</Typography>
         ) : (
           <Box
@@ -247,14 +264,14 @@ function StopsTimelineCard({ stops = [] }) {
               '&::-webkit-scrollbar-thumb': { bgcolor: 'divider', borderRadius: 2 },
             }}
           >
-            {stops.map((stop, index) => {
+            {orderedStops.map((stop, index) => {
               const key = coordKey(stop?.lng, stop?.lat)
               const locationLabel = (key && locationLabels[key]) || stop?.label || 'LOC'
               return (
                 <StopRow
                   key={`${stop.type}-${index}`}
                   stop={stop}
-                  isLast={index === stops.length - 1}
+                  isLast={index === orderedStops.length - 1}
                   locationLabel={locationLabel}
                 />
               )

@@ -64,6 +64,39 @@ def compute_summary_metrics(days, cycle_used_hours):
     }
 
 
+def _build_timeline_stops(logs):
+    timeline_stops = []
+
+    for day in logs or []:
+        day_number = day.get("day")
+        for remark in day.get("remarks", []):
+            stop_type = str(remark.get("stop_type", "")).lower() or "stop"
+            timeline_stops.append(
+                {
+                    "type": stop_type,
+                    "reason": remark.get("reason"),
+                    "label": remark.get("label"),
+                    "eld_required": (stop_type == "eld_limit") or bool(remark.get("eld_required")),
+                    "day": day_number,
+                    "minute": remark.get("minute"),
+                    "start_minute": remark.get("start_minute"),
+                    "end_minute": remark.get("end_minute"),
+                    "mile": remark.get("mile"),
+                    "lng": remark.get("lng"),
+                    "lat": remark.get("lat"),
+                }
+            )
+
+    timeline_stops.sort(
+        key=lambda item: (
+            int(item.get("day") or 0),
+            int(item.get("minute") or 0),
+        )
+    )
+
+    return timeline_stops
+
+
 class PlanTripView(APIView):
     def post(self, request):
         current_location = _normalize_location(request.data.get("current_location"))
@@ -77,6 +110,7 @@ class PlanTripView(APIView):
         )
         stops = plan_stops(route_data, pickup_location, dropoff_location)
         logs = generate_hos_logs(route_data, stops)
+        timeline_stops = _build_timeline_stops(logs)
         summary_metrics = compute_summary_metrics(logs, cycle_used_hours)
 
         return Response(
@@ -95,6 +129,7 @@ class PlanTripView(APIView):
                     "cycle_remaining_hours_after": summary_metrics["cycle_remaining_hours_after"],
                 },
                 "stops": stops,
+                "timeline_stops": timeline_stops,
                 "logs": logs,
             }
         )

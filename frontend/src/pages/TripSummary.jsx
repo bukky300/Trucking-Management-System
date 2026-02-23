@@ -9,6 +9,14 @@ function TripSummary({ response, onPlanAnother }) {
   const [showLogs, setShowLogs] = useState(false)
   const polyline = response?.route?.polyline
   const stops = response?.stops || []
+  const timelineStops = Array.isArray(response?.timeline_stops) ? response.timeline_stops : []
+  const mapStops =
+    timelineStops.length > 0
+      ? timelineStops.filter(
+          (stop) => typeof stop?.lng === 'number' && Number.isFinite(stop.lng)
+            && typeof stop?.lat === 'number' && Number.isFinite(stop.lat),
+        )
+      : stops
   const logs = response?.logs || []
   const hasPolyline = Array.isArray(polyline) && polyline.length > 0
 
@@ -28,7 +36,7 @@ function TripSummary({ response, onPlanAnother }) {
               <Card sx={{ width: '100%' }}>
                 <CardContent>
                   {hasPolyline ? (
-                    <MapView polyline={polyline} stops={stops} />
+                    <MapView polyline={polyline} stops={mapStops} />
                   ) : (
                     <Typography variant="body2" color="text.secondary">
                       No route polyline returned yet.

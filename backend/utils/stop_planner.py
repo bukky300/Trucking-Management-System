@@ -80,6 +80,7 @@ def _add_stop(
     lat,
     mile=None,
     label=None,
+    eld_required=False,
     allow_duplicate=False,
 ):
     if lng is None or lat is None:
@@ -94,6 +95,8 @@ def _add_stop(
         stop["mile"] = round(mile, 2)
     if label:
         stop["label"] = str(label)
+    if eld_required:
+        stop["eld_required"] = True
 
     stops.append(stop)
     seen_coords.add(key)
@@ -164,6 +167,7 @@ def plan_stops(route, pickup, dropoff):
             point[0],
             point[1],
             mile=target_miles,
+            eld_required=(stop_type == "break"),
             allow_duplicate=False,
         )
 
@@ -200,6 +204,7 @@ def plan_stops(route, pickup, dropoff):
             fuel_stop["combined_break"] = True
             fuel_stop["reason"] = "Fuel + 30-min break"
             fuel_stop["duration_minutes"] = 45
+            fuel_stop["eld_required"] = True
 
     if merged_break_indices:
         stops = [stop for idx, stop in enumerate(stops) if idx not in merged_break_indices]

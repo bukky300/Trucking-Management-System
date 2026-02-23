@@ -29,7 +29,11 @@ function TripSummaryPanel({ response }) {
   const totalDays = response?.summary?.total_days
   const compliance = complianceFromResponse(response)
   const hosReasons = Array.isArray(response?.summary?.hos_reasons) ? response.summary.hos_reasons : []
-  const stops = Array.isArray(response?.stops) ? response.stops : []
+  const stops = Array.isArray(response?.timeline_stops)
+    ? response.timeline_stops
+    : Array.isArray(response?.stops)
+      ? response.stops
+      : []
 
   useEffect(() => {
     if (compliance !== false || !hosReasons[0]) {

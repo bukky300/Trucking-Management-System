@@ -36,6 +36,8 @@ function stopMarkerIcon(type) {
     case 'sleeper':
     case 'rest':
       return <HotelIcon sx={{ fontSize: 13 }} />
+    case 'eld_limit':
+      return <HotelIcon sx={{ fontSize: 13 }} />
     case 'break':
       return <FreeBreakfastIcon sx={{ fontSize: 13 }} />
     default:
@@ -53,6 +55,8 @@ function stopMarkerColor(type) {
       return '#1976d2'
     case 'sleeper':
     case 'rest':
+      return '#7c3aed'
+    case 'eld_limit':
       return '#7c3aed'
     case 'break':
       return '#f59e0b'
@@ -192,6 +196,7 @@ function MapView({ polyline, stops = [] }) {
     if (stop?.type === 'break') return '30-min break'
     if (stop?.type === 'fuel') return 'Fuel'
     if (stop?.type === 'dropoff') return 'Post-trip'
+    if (stop?.type === 'eld_limit') return 'Daily driving limit'
     return capitalize(stop?.type || 'Stop')
   }
 
@@ -338,6 +343,7 @@ function MapView({ polyline, stops = [] }) {
           <LegendItem type="pickup" label="Pre-trip" isDark={isDark} />
           <LegendItem type="break" label="30-min break" isDark={isDark} />
           <LegendItem type="fuel" label="Fuel" isDark={isDark} />
+          <LegendItem type="eld_limit" label="Daily driving limit" isDark={isDark} />
           <LegendItem type="dropoff" label="Post-trip" isDark={isDark} />
         </Box>
       </Box>
