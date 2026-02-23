@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
-import { Box, IconButton, Popover, Typography } from '@mui/material'
+import { Box, IconButton, Popover, Typography, useTheme } from '@mui/material'
+import { alpha } from '@mui/material/styles'
+import AddIcon from '@mui/icons-material/Add'
+import RemoveIcon from '@mui/icons-material/Remove'
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import PlaceIcon from '@mui/icons-material/Place'
 import LocalGasStationIcon from '@mui/icons-material/LocalGasStation'
@@ -58,14 +61,44 @@ function stopMarkerColor(type) {
   }
 }
 
+function LegendItem({ type, label, isDark }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box
+        sx={{
+          width: 20,
+          height: 28,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: '10px / 14px',
+          backgroundColor: stopMarkerColor(type),
+          color: '#fff',
+          border: `1px solid ${isDark ? 'rgba(255,255,255,0.68)' : 'rgba(255,255,255,0.92)'}`,
+          boxShadow: '0 2px 6px rgba(2, 6, 23, 0.28)',
+          flexShrink: 0,
+        }}
+      >
+        {stopMarkerIcon(type)}
+      </Box>
+      <Typography variant="caption" sx={{ lineHeight: 1.25 }}>
+        {label}
+      </Typography>
+    </Box>
+  )
+}
+
 function capitalize(text) {
-  if (!text) {
-    return ''
-  }
+  if (!text) return ''
   return `${text.charAt(0).toUpperCase()}${text.slice(1)}`
 }
 
+const MIN_ZOOM = 3.5
+const MAX_ZOOM = 16
+
 function MapView({ polyline, stops = [] }) {
+  const theme = useTheme()
+  const isDark = theme.palette.mode === 'dark'
   const mapRef = useRef(null)
   const locationCacheRef = useRef({})
   const [mapLoaded, setMapLoaded] = useState(false)
@@ -124,9 +157,7 @@ function MapView({ polyline, stops = [] }) {
     const coordKey = (lng, lat) => {
       const lngNum = Number(lng)
       const latNum = Number(lat)
-      if (!Number.isFinite(lngNum) || !Number.isFinite(latNum)) {
-        return null
-      }
+      if (!Number.isFinite(lngNum) || !Number.isFinite(latNum)) return null
       return `${lngNum.toFixed(5)},${latNum.toFixed(5)}`
     }
 
@@ -142,13 +173,9 @@ function MapView({ polyline, stops = [] }) {
 
     const run = async () => {
       for (const stop of unresolved) {
-        if (controller.signal.aborted) {
-          return
-        }
+        if (controller.signal.aborted) return
         const key = coordKey(stop?.lng, stop?.lat)
-        if (!key) {
-          continue
-        }
+        if (!key) continue
         const label = await reverseGeocodeLabel(stop.lng, stop.lat, token, controller.signal)
         locationCacheRef.current[key] = label
       }
@@ -160,9 +187,7 @@ function MapView({ polyline, stops = [] }) {
   }, [stops, token])
 
   const reasonFromStop = (stop) => {
-    if (stop?.reason) {
-      return stop.reason
-    }
+    if (stop?.reason) return stop.reason
     if (stop?.type === 'pickup') return 'Pre-trip'
     if (stop?.type === 'break') return '30-min break'
     if (stop?.type === 'fuel') return 'Fuel'
@@ -178,99 +203,189 @@ function MapView({ polyline, stops = [] }) {
     return (key && stopLabelByKey[key]) || 'LOC'
   }
 
+  const handleZoomIn = () => {
+    const map = mapRef.current?.getMap?.()
+    if (!map) return
+    map.zoomIn({ duration: 200 })
+  }
+
+  const handleZoomOut = () => {
+    const map = mapRef.current?.getMap?.()
+    if (!map) return
+    map.zoomOut({ duration: 200 })
+  }
+
   if (!token) {
     return <div>Missing VITE_MAPBOX_TOKEN. Add it to frontend/.env.</div>
   }
 
   return (
-    <Map
-      ref={mapRef}
-      mapboxAccessToken={token}
-      initialViewState={{ longitude: -96, latitude: 37.8, zoom: 3 }}
-      mapStyle="mapbox://styles/mapbox/streets-v12"
-      style={{ width: '100%', height: '75vh' }}
-      onLoad={() => {
-        setMapLoaded(true)
-        // Fit immediately after load as well
-        setTimeout(fitToRoute, 0)
-      }}
-    >
-      <Source id="route" type="geojson" data={geojson}>
-        <Layer {...routeLayer} />
-      </Source>
-      {Array.isArray(stops)
-        ? stops.map((stop, idx) => {
-            if (typeof stop?.lng !== 'number' || typeof stop?.lat !== 'number') {
-              return null
-            }
+    <Box sx={{ position: 'relative', width: '100%', height: '75vh' }}>
+      <Map
+        ref={mapRef}
+        mapboxAccessToken={token}
+        initialViewState={{ longitude: -96, latitude: 37.8, zoom: 3 }}
+        mapStyle="mapbox://styles/mapbox/streets-v12"
+        style={{ width: '100%', height: '100%' }}
+        minZoom={MIN_ZOOM}
+        maxZoom={MAX_ZOOM}
+        onLoad={() => {
+          setMapLoaded(true)
+          setTimeout(fitToRoute, 0)
+        }}
+      >
+        <Source id="route" type="geojson" data={geojson}>
+          <Layer {...routeLayer} />
+        </Source>
 
-            return (
-              <Marker key={idx} longitude={stop.lng} latitude={stop.lat}>
-                <Box
-                  component="button"
-                  type="button"
-                  onClick={(event) => {
-                    setSelectedStop(stop)
-                    setPopoverAnchorEl(event.currentTarget)
+        {Array.isArray(stops)
+          ? stops.map((stop, idx) => {
+              if (typeof stop?.lng !== 'number' || typeof stop?.lat !== 'number') return null
+              return (
+                <Marker key={idx} longitude={stop.lng} latitude={stop.lat}>
+                  <Box
+                    component="button"
+                    type="button"
+                    onClick={(event) => {
+                      setSelectedStop(stop)
+                      setPopoverAnchorEl(event.currentTarget)
+                    }}
+                    sx={{
+                      width: 20,
+                      height: 28,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '10px / 14px',
+                      backgroundColor: stopMarkerColor(stop.type),
+                      color: '#fff',
+                      border: '1px solid rgba(255,255,255,0.9)',
+                      boxShadow: '0 2px 6px rgba(2, 6, 23, 0.3)',
+                      cursor: 'pointer',
+                      p: 0,
+                    }}
+                  >
+                    {stopMarkerIcon(stop.type)}
+                  </Box>
+                </Marker>
+              )
+            })
+          : null}
+
+        <Popover
+          open={Boolean(selectedStop && popoverAnchorEl)}
+          anchorEl={popoverAnchorEl}
+          onClose={() => {
+            setSelectedStop(null)
+            setPopoverAnchorEl(null)
+          }}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+          transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          {selectedStop ? (
+            <Box sx={{ p: 1.5, minWidth: 180 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                <Typography variant="subtitle2">{reasonFromStop(selectedStop)}</Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    setSelectedStop(null)
+                    setPopoverAnchorEl(null)
                   }}
                   sx={{
-                    width: 20,
-                    height: 28,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '10px / 14px',
-                    backgroundColor: stopMarkerColor(stop.type),
-                    color: '#fff',
-                    border: '1px solid rgba(255,255,255,0.9)',
-                    boxShadow: '0 2px 6px rgba(2, 6, 23, 0.3)',
-                    cursor: 'pointer',
-                    p: 0,
+                    color: '#111827',
+                    backgroundColor: '#e5e7eb',
+                    '&:hover': { backgroundColor: '#d1d5db' },
                   }}
                 >
-                  {stopMarkerIcon(stop.type)}
-                </Box>
-              </Marker>
-            )
-          })
-        : null}
-      <Popover
-        open={Boolean(selectedStop && popoverAnchorEl)}
-        anchorEl={popoverAnchorEl}
-        onClose={() => {
-          setSelectedStop(null)
-          setPopoverAnchorEl(null)
-        }}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        {selectedStop ? (
-          <Box sx={{ p: 1.5, minWidth: 180 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-              <Typography variant="subtitle2">{reasonFromStop(selectedStop)}</Typography>
-              <IconButton
-                size="small"
-                onClick={() => {
-                  setSelectedStop(null)
-                  setPopoverAnchorEl(null)
-                }}
-                sx={{
-                  color: '#111827',
-                  backgroundColor: '#e5e7eb',
-                  '&:hover': { backgroundColor: '#d1d5db' },
-                }}
-              >
-                x
-              </IconButton>
+                  x
+                </IconButton>
+              </Box>
+              <Typography variant="body2">{getLocationLabel(selectedStop)}</Typography>
+              {selectedStop.mile !== undefined && selectedStop.mile !== null ? (
+                <Typography variant="body2">Mile {selectedStop.mile}</Typography>
+              ) : null}
             </Box>
-            <Typography variant="body2">{getLocationLabel(selectedStop)}</Typography>
-            {selectedStop.mile !== undefined && selectedStop.mile !== null ? (
-              <Typography variant="body2">Mile {selectedStop.mile}</Typography>
-            ) : null}
-          </Box>
-        ) : null}
-      </Popover>
-    </Map>
+          ) : null}
+        </Popover>
+      </Map>
+
+      {/* Route legend — bottom left */}
+      <Box
+        sx={{
+          position: 'absolute',
+          left: 12,
+          bottom: 12,
+          zIndex: 10,
+          p: 1.25,
+          borderRadius: 1,
+          bgcolor: isDark
+            ? alpha(theme.palette.background.paper, 0.9)
+            : alpha(theme.palette.background.paper, 0.94),
+          border: '1px solid',
+          borderColor: 'divider',
+          boxShadow: isDark ? '0 4px 14px rgba(2,6,23,0.45)' : '0 3px 12px rgba(2,6,23,0.16)',
+          minWidth: 176,
+        }}
+      >
+        <Typography
+          variant="caption"
+          sx={{ display: 'block', fontWeight: 700, mb: 0.95, letterSpacing: 0.2 }}
+        >
+          Route Legend
+        </Typography>
+        <Box sx={{ display: 'grid', gap: 0.9 }}>
+          <LegendItem type="pickup" label="Pre-trip" isDark={isDark} />
+          <LegendItem type="break" label="30-min break" isDark={isDark} />
+          <LegendItem type="fuel" label="Fuel" isDark={isDark} />
+          <LegendItem type="dropoff" label="Post-trip" isDark={isDark} />
+        </Box>
+      </Box>
+
+      {/* Zoom controls — top right */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 12,
+          right: 12,
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: 1,
+          overflow: 'hidden',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+          zIndex: 10,
+        }}
+      >
+        <IconButton
+          onClick={handleZoomIn}
+          size="small"
+          sx={{
+            bgcolor: 'background.paper',
+            borderRadius: 0,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            '&:hover': { bgcolor: 'action.hover' },
+            width: 32,
+            height: 32,
+          }}
+        >
+          <AddIcon fontSize="small" />
+        </IconButton>
+        <IconButton
+          onClick={handleZoomOut}
+          size="small"
+          sx={{
+            bgcolor: 'background.paper',
+            borderRadius: 0,
+            '&:hover': { bgcolor: 'action.hover' },
+            width: 32,
+            height: 32,
+          }}
+        >
+          <RemoveIcon fontSize="small" />
+        </IconButton>
+      </Box>
+    </Box>
   )
 }
 
