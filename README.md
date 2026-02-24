@@ -10,7 +10,12 @@ The system:
 - produces ELD log timelines
 - visualizes compliance and trip feasibility
 
-This is a deterministic simulation tool, not a certified compliance engine.
+
+<img width="1728" height="1117" alt="image" src="https://github.com/user-attachments/assets/8d44d23f-45d4-4a91-a74a-d0e93f368e00" />
+
+
+<img width="3456" height="2234" alt="image" src="https://github.com/user-attachments/assets/b35fc5dd-7be6-472a-99f4-4acac1815141" />
+
 
 ## System Architecture
 Flow:
@@ -36,7 +41,6 @@ Flow:
 - `POST /api/trips/plan`
 - Health endpoints for monitoring:
   - `GET /health`
-  - `GET /ping`
 
 ### Request Normalization
 Locations are accepted as:
